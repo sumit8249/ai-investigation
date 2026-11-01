@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Directly calls your live Render backend
 const API_BASE = 'https://ai-mystery-room-api-q69g.onrender.com/api';
 
 const client = axios.create({
@@ -8,7 +7,7 @@ const client = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 30000
+  timeout: 60000 // 60 seconds to allow Render cold-starts
 });
 
 export const caseApi = {
