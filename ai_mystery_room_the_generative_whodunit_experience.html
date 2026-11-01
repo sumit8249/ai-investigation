@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Mystery Room — The Generative Whodunit Experience</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            noir: {
+              950: '#07080c',
+              900: '#0e1017',
+              850: '#131520',
+              800: '#1c1f2e',
+              700: '#2b3044',
+            },
+            detective: {
+              gold: '#eab308',
+              amber: '#f59e0b',
+              crimson: '#dc2626',
+              emerald: '#10b981',
+              parchment: '#fef3c7'
+            }
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            mono: ['Courier New', 'Courier', 'monospace'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.368.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body {
+      background-color: #08090e;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+    }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    .font-typewriter { font-family: 'Special Elite', 'Courier New', monospace; }
+    
+    /* Subtle CRT scanline effect for noir aesthetic */
+    .noir-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 3px 100%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#07080d] text-zinc-200 antialiased selection:bg-amber-500 selection:text-black">
+  <div class="noir-overlay fixed inset-0 z-50 pointer-events-none opacity-40"></div>
+  <div id="toast" class="fixed top-5 right-5 z-50 hidden max-w-sm p-4 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 text-xs shadow-2xl flex items-center gap-3 animate-bounce">
+    <i data-lucide="alert-circle" class="w-5 h-5 text-rose-400 shrink-0"></i>
+    <span id="toast-msg"></span>
+  </div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="border-b border-amber-900/30 bg-[#0c0d14]/95 backdrop-blur sticky top-0 z-40 px-4 sm:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('home')">
+        <div class="w-10 h-10 rounded-xl bg-amber-950/70 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/40">
+          <i data-lucide="search" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-cinzel text-lg font-black tracking-wider text-amber-100">AI MYSTERY ROOM</span>
+            <span class="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono px-1.5 py-0.5 rounded uppercase">Gemini AI</span>
+          </div>
+          <p class="text-[11px] text-zinc-400 font-mono">Deductive Crime Simulator & Mystery Engine</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Audio toggle -->
+        <button id="audio-toggle-btn" onclick="toggleAudio()" class="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-400 text-xs font-mono flex items-center gap-1.5 transition-colors">
+          <i id="audio-icon" data-lucide="volume-2" class="w-4 h-4"></i>
+          <span id="audio-label" class="hidden sm:inline">Audio On</span>
+        </button>
+
+        <button onclick="navigateTo('create')" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-950/30 transition-all">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>New Case</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    
+    <!-- 1. VIEW: HOME -->
+    <section id="view-home" class="space-y-12 py-6">
+      <div class="text-center max-w-4xl mx-auto pt-6 pb-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono mb-6">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <span>Full-Stack AI Project • Vite + React + Express + MongoDB + Gemini</span>
+        </div>
+
+        <h1 class="font-cinzel text-4xl sm:text-6xl font-black text-zinc-100 tracking-tight leading-tight">
+          Solve AI-Generated <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500">Murder Mysteries</span>
+        </h1>
+
+        <p class="mt-6 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          Step into the boots of a lead detective. Inspect crime scenes, discover forensic clues, weigh suspect alibis, request encrypted hints, and single out the culprit with server-sequestered proof.
+        </p>
+
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button onclick="navigateTo('create')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-amber-950/50 flex items-center justify-center gap-2 transition-all">
+            <span>Commission New Mystery</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+          <button onclick="quickLaunchDemo()" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs sm:text-sm font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+            <i data-lucide="play" class="w-4 h-4 text-amber-400"></i>
+            <span>Instant Demo Case</span>
+          </button>
+        </div>
+
+        <!-- Quick Spec Matrix -->
+        <div class="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+          <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+            <span class="text-2xl font-black text-amber-400 font-cinzel">3 Tiers</span>
+            <p class="text-xs text-zinc-400 font-mono mt-1">Easy • Medium • Hard</p>
+          </div>
+          <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+            <span class="text-2xl font-black text-amber-400 font-cinzel">100% Secret</span>
+            <p class="text-xs text-zinc-400 font-mono mt-1">Backend Solution Isolation</p>
+          </div>
+          <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+            <span class="text-2xl font-black text-amber-400 font-cinzel">+5 / -10</span>
+            <p class="text-xs text-zinc-400 font-mono mt-1">Clue Bonus & Hint Penalties</p>
+          </div>
+          <div class="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+            <span class="text-2xl font-black text-amber-400 font-cinzel">Zod Valid</span>
+            <p class="text-xs text-zinc-400 font-mono mt-1">Strict Logical Schema</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. VIEW: CREATE MYSTERY -->
+    <section id="view-create" class="hidden max-w-4xl mx-auto py-6 space-y-6">
+      <div class="text-center mb-6">
+        <h2 class="font-cinzel text-3xl font-black text-zinc-100">Commission A New Investigation</h2>
+        <p class="text-xs sm:text-sm text-zinc-400 mt-1">Input a custom premise or pick a classic detective trope below.</p>
+      </div>
+
+      <div class="bg-[#10121c] p-6 sm:p-8 rounded-2xl border border-zinc-800 space-y-6 shadow-2xl">
+        <!-- Premise -->
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-amber-400 mb-2">
+            Mystery Premise / Core Crime Scenario
+          </label>
+          <textarea id="premise-input" rows="3" placeholder="Describe the crime scene, setting, victim, or incident (e.g. 'A prized mechanical astrolabe disappears from a locked guild vault during a masquerade ball...')" class="w-full bg-[#08090e] border border-zinc-800 rounded-xl p-4 text-xs sm:text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 font-mono"></textarea>
+          
+          <div class="mt-3">
+            <span class="text-[11px] font-mono text-zinc-500 block mb-2">Preset Scenarios:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button onclick="applyPreset(0)" class="text-left p-2.5 rounded-lg bg-zinc-900/70 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-800 transition-all">
+                <span class="text-[10px] font-mono text-amber-400 uppercase block">Victorian Vault Heist</span>
+                <span class="text-xs text-zinc-300 font-medium">The Stolen Ravencrest Astrolabe</span>
+              </button>
+              <button onclick="applyPreset(1)" class="text-left p-2.5 rounded-lg bg-zinc-900/70 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-800 transition-all">
+                <span class="text-[10px] font-mono text-amber-400 uppercase block">Cyberpunk Cleanroom</span>
+                <span class="text-xs text-zinc-300 font-medium">The Neo-Tokyo Biotech Sabotage</span>
+              </button>
+              <button onclick="applyPreset(2)" class="text-left p-2.5 rounded-lg bg-zinc-900/70 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-800 transition-all">
+                <span class="text-[10px] font-mono text-amber-400 uppercase block">Express Train Mystery</span>
+                <span class="text-xs text-zinc-300 font-medium">The Snowbound Orient Poisoning</span>
+              </button>
+              <button onclick="applyPreset(3)" class="text-left p-2.5 rounded-lg bg-zinc-900/70 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-800 transition-all">
+                <span class="text-[10px] font-mono text-amber-400 uppercase block">Art Auction Theft</span>
+                <span class="text-xs text-zinc-300 font-medium">The Midnight Gallery Arson</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Difficulty Tiers -->
+        <div>
+          <label class="block text-xs font-mono uppercase tracking-wider text-amber-400 mb-3">
+            Difficulty Tier & Case Scale
+          </label>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div id="diff-easy" onclick="selectDifficulty('easy')" class="cursor-pointer p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:border-emerald-600/60 transition-all">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-cinzel font-bold text-emerald-400 text-sm">Easy</span>
+                <span class="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">100 Base Pts</span>
+              </div>
+              <p class="text-xs text-zinc-400 font-mono">• 3 Suspects<br>• 5 Forensic Clues<br>• 2 Clue Hints</p>
+            </div>
+
+            <div id="diff-medium" onclick="selectDifficulty('medium')" class="cursor-pointer p-4 rounded-xl border border-amber-500/80 bg-amber-950/20 ring-1 ring-amber-500/50 shadow-lg shadow-amber-950/30 transition-all">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-cinzel font-bold text-amber-400 text-sm">Medium</span>
+                <span class="text-[10px] font-mono bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">150 Base Pts</span>
+              </div>
+              <p class="text-xs text-zinc-400 font-mono">• 4 Suspects<br>• 7 Forensic Clues<br>• 3 Clue Hints</p>
+            </div>
+
+            <div id="diff-hard" onclick="selectDifficulty('hard')" class="cursor-pointer p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:border-rose-600/60 transition-all">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-cinzel font-bold text-rose-400 text-sm">Hard</span>
+                <span class="text-[10px] font-mono bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20">200 Base Pts</span>
+              </div>
+              <p class="text-xs text-zinc-400 font-mono">• 5 Suspects<br>• 9 Forensic Clues<br>• 3 Clue Hints</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="startGeneratingCase()" class="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold uppercase tracking-wider text-xs sm:text-sm shadow-xl shadow-amber-950 flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Generate Mystery Dossier</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. VIEW: GENERATING LOADING STATE -->
+    <section id="view-loading" class="hidden min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
+      <div class="relative w-16 h-16">
+        <div class="w-16 h-16 rounded-full border-4 border-zinc-800 border-t-amber-500 animate-spin"></div>
+        <div class="absolute inset-0 flex items-center justify-center text-amber-400">
+          <i data-lucide="search" class="w-6 h-6"></i>
+        </div>
+      </div>
+      <h3 class="font-cinzel font-bold text-xl text-zinc-100">Consulting Gemini Mystery Architect</h3>
+      <p id="loading-status" class="text-xs font-mono text-amber-400/90">Synthesizing crime narrative and suspect alibis...</p>
+      <div class="w-64 h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-2">
+        <div id="loading-bar" class="h-full bg-amber-500 w-1/3 transition-all duration-700"></div>
+      </div>
+    </section>
+
+    <!-- 4. VIEW: INVESTIGATION ROOM -->
+    <section id="view-room" class="hidden space-y-8 py-4">
+      <!-- Case Overview Box -->
+      <div class="bg-[#11121d] border border-zinc-800 rounded-2xl p-6 shadow-xl relative">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-zinc-800">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span id="case-badge-id" class="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-amber-400 border border-zinc-700">CASE #7419</span>
+              <span id="case-badge-diff" class="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-amber-950/40 text-amber-400 border border-amber-800/40">MEDIUM</span>
+            </div>
+            <h2 id="case-title" class="font-cinzel text-2xl sm:text-3xl font-black text-zinc-100">The Whispering Vault</h2>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button onclick="openHintModal()" class="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-amber-400 border border-amber-900/40 text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-all">
+              <i data-lucide="lightbulb" class="w-4 h-4"></i>
+              <span id="hint-button-label">Hints (3 Left)</span>
+            </button>
+            <button onclick="navigateTo('accuse')" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-950 transition-all">
+              <span>Accuse Suspect</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Synopsis & Crime Details -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-2 space-y-4">
+            <div>
+              <span class="text-xs font-mono uppercase text-amber-400 tracking-wider block mb-1">Crime Synopsis & Circumstances</span>
+              <p id="case-synopsis" class="text-xs sm:text-sm text-zinc-300 leading-relaxed font-mono bg-[#08090e] p-4 rounded-xl border border-zinc-800/80"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800 flex items-center gap-2.5">
+                <i data-lucide="map-pin" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                <div>
+                  <span class="text-[10px] text-zinc-500 uppercase block font-mono">Location</span>
+                  <span id="case-setting" class="text-zinc-200 font-medium">Archive Vault</span>
+                </div>
+              </div>
+              <div class="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800 flex items-center gap-2.5">
+                <i data-lucide="clock" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                <div>
+                  <span class="text-[10px] text-zinc-500 uppercase block font-mono">Time Window</span>
+                  <span id="case-time" class="text-zinc-200 font-medium">10:45 PM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Score Tracker -->
+          <div class="bg-[#08090e] p-4 rounded-xl border border-zinc-800 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-mono uppercase text-zinc-400 tracking-wider block mb-2">Investigation Scorecard</span>
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between py-1 border-b border-zinc-800">
+                  <span class="text-zinc-400">Clues Discovered:</span>
+                  <span id="scorecard-clues" class="font-mono text-zinc-200 font-semibold">0 / 7 (+0 pts)</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-zinc-800">
+                  <span class="text-zinc-400">Hints Unlocked:</span>
+                  <span id="scorecard-hints" class="font-mono text-rose-400 font-semibold">0 used (-0 pts)</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-zinc-400">Accusation Reward:</span>
+                  <span id="scorecard-base" class="font-mono text-amber-400 font-semibold">+150 pts</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-[10px] text-zinc-500 font-mono mt-3 italic">* Culprit and solution sealed on backend.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suspects Roster -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-cinzel text-xl font-bold text-zinc-100 flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
+            <span>Suspect Dossiers</span>
+          </h3>
+          <span class="text-xs text-zinc-400 font-mono">Compare alibis against physical evidence</span>
+        </div>
+        <div id="suspects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      </div>
+
+      <!-- Forensic Clues Board -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-cinzel text-xl font-bold text-zinc-100 flex items-center gap-2">
+            <i data-lucide="search" class="w-5 h-5 text-amber-400"></i>
+            <span>Forensic Clues & Crime Scene Evidence</span>
+          </h3>
+          <span class="text-xs text-zinc-400 font-mono">Inspect each scene to uncover clues (+5 pts)</span>
+        </div>
+        <div id="clues-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- 5. VIEW: ACCUSATION -->
+    <section id="view-accuse" class="hidden max-w-4xl mx-auto py-6 space-y-6">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <button onclick="navigateTo('room')" class="flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-amber-400">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Return to Investigation Room</span>
+        </button>
+        <span class="font-mono text-xs text-amber-400 uppercase">Final Indictment</span>
+      </div>
+
+      <div class="text-center max-w-2xl mx-auto">
+        <h2 class="font-cinzel text-3xl font-black text-zinc-100">Indict The Culprit</h2>
+        <p class="text-xs sm:text-sm text-zinc-400 mt-1">Select the suspect whose motives and forensic trace conclusively match the crime scene.</p>
+      </div>
+
+      <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-900/40 text-xs text-amber-200 flex items-center gap-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 shrink-0"></i>
+        <span>Submitting your accusation will permanently close the case, reveal the culprit, and compute your official score.</span>
+      </div>
+
+      <div id="accuse-suspects-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+      <div class="bg-[#11121d] p-6 rounded-2xl border border-zinc-800 space-y-4">
+        <label class="block text-xs font-mono uppercase tracking-wider text-amber-400">
+          Investigative Deduction Rationale (Optional)
+        </label>
+        <textarea id="accuse-notes" rows="3" placeholder="Explain how the forensic clues refute their alibi..." class="w-full bg-[#08090e] border border-zinc-800 rounded-xl p-3.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 font-mono"></textarea>
+        
+        <button onclick="submitAccusation()" class="w-full py-4 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold uppercase tracking-wider text-xs sm:text-sm shadow-xl shadow-rose-950/40 flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Seal Indictment & Reveal Verdict</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 6. VIEW: RESULTS -->
+    <section id="view-results" class="hidden max-w-4xl mx-auto py-6 space-y-6">
+      <div id="verdict-card" class="p-8 rounded-3xl border text-center shadow-2xl relative overflow-hidden">
+        <div id="verdict-icon-container" class="inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 border shadow-inner">
+          <i id="verdict-icon" data-lucide="check-circle" class="w-10 h-10"></i>
+        </div>
+        <span class="font-mono text-xs uppercase tracking-widest text-zinc-400 block mb-1">Official Inquiry Verdict</span>
+        <h2 id="verdict-title" class="font-cinzel text-3xl sm:text-5xl font-black text-zinc-100 tracking-tight">CASE SOLVED</h2>
+        <p id="verdict-subtitle" class="text-xs sm:text-sm text-zinc-300 mt-2 max-w-xl mx-auto leading-relaxed"></p>
+
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div class="px-6 py-2.5 rounded-2xl bg-black/50 border border-white/10 flex items-center gap-3">
+            <span class="text-xs text-zinc-400 font-mono uppercase">Total Score:</span>
+            <span id="result-score" class="text-3xl font-black text-amber-400 font-cinzel">175</span>
+            <span class="text-xs text-zinc-500 font-mono">PTS</span>
+          </div>
+          <div class="px-6 py-2.5 rounded-2xl bg-black/50 border border-white/10 flex items-center gap-2">
+            <i data-lucide="award" class="w-5 h-5 text-amber-400"></i>
+            <div class="text-left">
+              <span class="text-[10px] text-zinc-400 uppercase font-mono block">Rank Awarded</span>
+              <span id="result-rank" class="text-xs font-bold font-cinzel text-amber-400">Master Detective ⭐⭐⭐</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Point Breakdown -->
+      <div class="bg-[#11121d] border border-zinc-800 rounded-2xl p-6">
+        <h3 class="font-cinzel font-bold text-lg text-zinc-200 mb-3 flex items-center gap-2">
+          <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+          <span>Official Score Audit</span>
+        </h3>
+        <div class="divide-y divide-zinc-800/80 text-xs font-mono">
+          <div class="py-2 flex justify-between">
+            <span class="text-zinc-400">Accusation Accuracy:</span>
+            <span id="breakdown-base" class="text-emerald-400 font-bold">+150 pts</span>
+          </div>
+          <div class="py-2 flex justify-between">
+            <span class="text-zinc-400">Clue Discoveries (<span id="breakdown-clues-count">0</span> uncovered × 5):</span>
+            <span id="breakdown-clues" class="text-emerald-400 font-bold">+25 pts</span>
+          </div>
+          <div class="py-2 flex justify-between">
+            <span class="text-zinc-400">Hint Penalties (<span id="breakdown-hints-count">0</span> hints × -10):</span>
+            <span id="breakdown-hints" class="text-rose-400 font-bold">-0 pts</span>
+          </div>
+          <div class="py-2.5 flex justify-between text-sm font-bold border-t border-zinc-700">
+            <span class="text-zinc-200">Final Calculated Score:</span>
+            <span id="breakdown-total" class="text-amber-400 text-base">175 pts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Solution Explanation -->
+      <div class="bg-[#11121d] border border-zinc-800 rounded-2xl p-6 space-y-4">
+        <div class="flex items-center gap-2 text-amber-400">
+          <i data-lucide="file-text" class="w-5 h-5"></i>
+          <h3 class="font-cinzel font-bold text-xl text-zinc-100">Forensic Truth & Culprit Dossier</h3>
+        </div>
+        <div class="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs font-mono">
+          <span class="text-zinc-400">True Culprit:</span>
+          <span id="culprit-name" class="text-amber-400 font-bold text-sm">Elena Rostova</span>
+        </div>
+        <div>
+          <span class="text-xs font-mono uppercase text-zinc-400 block mb-1.5">Investigative Chain & Breakdown:</span>
+          <p id="culprit-explanation" class="text-xs sm:text-sm text-zinc-300 leading-relaxed font-mono bg-[#08090e] p-4 rounded-xl border border-zinc-800/80"></p>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+        <button onclick="navigateTo('create')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-amber-950 transition-all">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          <span>Start Another Investigation</span>
+        </button>
+        <button onclick="navigateTo('home')" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-semibold uppercase tracking-wider flex items-center justify-center">
+          Return to HQ
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- HINT MODAL DIALOG -->
+  <div id="hint-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="bg-[#11121d] border border-amber-900/40 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950">
+        <div class="flex items-center gap-2 text-amber-400">
+          <i data-lucide="lightbulb" class="w-5 h-5"></i>
+          <h3 class="font-cinzel font-bold text-sm text-zinc-100">Investigative Hints Dossier</h3>
+        </div>
+        <button onclick="closeHintModal()" class="text-zinc-500 hover:text-zinc-300 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div class="flex items-center justify-between text-xs bg-amber-950/20 border border-amber-900/30 p-3 rounded-xl text-amber-200">
+          <span>Each unlocked hint applies a <strong>-10 point</strong> deduction.</span>
+          <span id="modal-hints-remaining" class="font-mono bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">3 left</span>
+        </div>
+        <div id="modal-hints-list" class="space-y-3"></div>
+      </div>
+
+      <div class="p-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-between">
+        <button onclick="closeHintModal()" class="px-4 py-2 rounded-lg text-xs font-semibold uppercase text-zinc-400 hover:text-zinc-200">Close</button>
+        <button id="unlock-hint-btn" onclick="requestNextHint()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-950">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Unlock Next Hint (-10 pts)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-zinc-900/80 py-4 px-4 text-center text-xs text-zinc-400 font-mono">
+    AI Mystery Room • Generative Detective Experience
+  </footer>
+
+  <script>
+    // --- AUDIO SYSTEM (Web Audio API Synthesizer) ---
+    let audioEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const label = document.getElementById('audio-label');
+      const icon = document.getElementById('audio-icon');
+      if (label) label.textContent = audioEnabled ? 'Audio On' : 'Audio Muted';
+      if (icon) {
+        icon.setAttribute('data-lucide', audioEnabled ? 'volume-2' : 'volume-x');
+        lucide.createIcons();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.15, vol = 0.1) {
+      if (!audioEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        console.warn('Audio play error:', e);
+      }
+    }
+
+    function playClueSound() {
+      playTone(587.33, 'triangle', 0.1, 0.12);
+      setTimeout(() => playTone(880, 'sine', 0.2, 0.1), 80);
+    }
+
+    function playHintSound() {
+      playTone(440, 'sine', 0.15, 0.12);
+      setTimeout(() => playTone(659.25, 'triangle', 0.25, 0.1), 100);
+    }
+
+    function playVictorySound() {
+      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+        setTimeout(() => playTone(f, 'triangle', 0.35, 0.15), i * 110);
+      });
+    }
+
+    function playDefeatSound() {
+      [440, 415.30, 392, 349.23].forEach((f, i) => {
+        setTimeout(() => playTone(f, 'sawtooth', 0.3, 0.08), i * 140);
+      });
+    }
+
+    // --- GAME ENGINE STATE & DATA ---
+    const PRESETS = [
+      {
+        title: "The Stolen Ravencrest Astrolabe",
+        premise: "A prized 14th-century gilded astrolabe disappears from a locked guild vault during an upscale charity gala.",
+        setting: "Ravencrest Antiquities Guild Vault & Gala Hall",
+        timeOfCrime: "10:45 PM – 11:10 PM",
+        victim: "Julian Vance (Senior Archivist, bound and sedated)",
+        incidentSummary: "The seismic vault alarm was bypassed using precision chemical solvent. Julian Vance was discovered unconscious in the study with zero signs of physical struggle.",
+        suspects: [
+          { id: "suspect-1", name: "Elena Rostova", role: "Senior Conservator", alibi: "Cataloging restoration chemicals in the sub-lab.", motive: "Facing debt collection demands from auction creditors.", suspiciousDetail: "Traces of rare brass-dissolving solvent detected on her cuffs." },
+          { id: "suspect-2", name: "Marcus Thorne", role: "Head of Facility Security", alibi: "Patrolling the outer perimeter gardens.", motive: "Recently passed over for Guild directorship.", suspiciousDetail: "Security terminal camera 4B was placed on a loop at 10:50 PM." },
+          { id: "suspect-3", name: "Dr. Arthur Pendelton", role: "Visiting Historian", alibi: "Resting in guest quarters with door locked.", motive: "Controversial claim that the astrolabe belongs to his museum.", suspiciousDetail: "Wet footprint impressions matching his Italian loafers near ventilation." },
+          { id: "suspect-4", name: "Beatrix Sinclair", role: "Gala Benefactor", alibi: "Mingling with high-profile donors in ballroom.", motive: "Private collector syndicate ties.", suspiciousDetail: "Disappeared from the gala for 25 minutes claiming a sudden migraine." },
+          { id: "suspect-5", name: "Jonah Reed", role: "Janitorial Supervisor", alibi: "Disposing of gala recycling cartons.", motive: "Critical family debt obligations.", suspiciousDetail: "Seen hauling heavy canvas sack near service exit." }
+        ],
+        clues: [
+          { id: "clue-1", title: "Looped Security Terminal", location: "Security Operations Room", description: "Terminal log records camera feed 4B frozen on a 15-minute loop starting at 10:50 PM." },
+          { id: "clue-2", title: "Dissolved Tumbler Mechanism", location: "Vault Showcase Door", description: "Specialized brass-cutting solvent was directly injected into the tumbler mechanism." },
+          { id: "clue-3", title: "Blue Cashmere Thread", location: "Showcase Latch", description: "Microscopic blue cashmere fibers caught inside the lock plate." },
+          { id: "clue-4", title: "Sub-Level Keycard Swipe", location: "Service Elevator Door", description: "Master conservator badge swiped into lower vault corridor at 10:48 PM." },
+          { id: "clue-5", title: "Final Debt Notice", location: "Conservator Office Desk", description: "Legal foreclosure letter addressed to Elena Rostova demanding payment by week's end." },
+          { id: "clue-6", title: "Muddy Loafer Impression", location: "Courtyard Intake Grate", description: "Herringbone tread pattern impressed into damp flowerbed clay." },
+          { id: "clue-7", title: "Discarded Solvent Vial", location: "Waste Chute B-3", description: "Glass vial wrapped in monogrammed silk, containing industrial restoration solvent." },
+          { id: "clue-8", title: "Anonymous Encrypted Pager", location: "Staff Wardrobe", description: "Received SMS: 'Courier is stationed at rear pier. Move before midnight.'" },
+          { id: "clue-9", title: "Sedative Needle Wrapper", location: "Archivist Office Carpet", description: "Packaging of fast-acting veterinary tranquilizer." }
+        ],
+        hints: [
+          { id: "hint-1", order: 1, text: "Focus on the specific chemical solvent used on the showcase tumbler lock." },
+          { id: "hint-2", order: 2, text: "Check which suspect had verified access to conservation chemicals and wore cashmere." },
+          { id: "hint-3", order: 3, text: "Cross-reference the financial debt notice with the sub-level elevator access log." }
+        ],
+        culpritId: "suspect-1",
+        culpritName: "Elena Rostova",
+        solutionText: "Senior Conservator Elena Rostova utilized her specialized knowledge of antiquities solvents to quietly liquefy the vault tumbler without triggering acoustic sensors. Crushed by mounting debt, she donned a blue cashmere cardigan, swiped into the sub-level at 10:48 PM, and sedated the archivist. Her alibi in the restoration lab fell apart once the solvent traces on her sleeve and cashmere threads in the tumbler matched the crime scene evidence."
+      },
+      {
+        title: "The Neo-Tokyo Biotech Sabotage",
+        premise: "The lead researcher of a neural-interface laboratory is discovered trapped in the cryo-cleanroom after hours.",
+        setting: "NeuroSyn Labs Subterranean Cleanroom B",
+        timeOfCrime: "02:15 AM – 02:40 AM",
+        victim: "Dr. Kenji Sato (Chief Neuro-Architect, safely rescued)",
+        incidentSummary: "The cleanroom biometric locks were overridden with a stolen diagnostic bypass card, venting liquid nitrogen into the ventilation loop.",
+        suspects: [
+          { id: "suspect-1", name: "Sora Takahashi", role: "Junior Neural Engineer", alibi: "Calibrating synaptic headsets in workstation 7.", motive: "Patent rights for the neural codec were attributed solely to Sato.", suspiciousDetail: "Terminal command history reveals unauthorized debug override query at 02:20 AM." },
+          { id: "suspect-2", name: "Vincent Cross", role: "Corporate Compliance Officer", alibi: "Reviewing regulatory audit filings in his office.", motive: "Pressured by competitors to delay FDA clinical approval.", suspiciousDetail: "Security logs show his badge accessed the cryo-chiller terrace." },
+          { id: "suspect-3", name: "Reiko Mori", role: "System Administrator", alibi: "Executing remote cloud backups from the server rack.", motive: "Recently discovered Dr. Sato had reported her unauthorized data transfers.", suspiciousDetail: "Biometric override tool was compiled from her terminal IP." },
+          { id: "suspect-4", name: "Dr. Hiroshi Tanaka", role: "Chief Clinical Officer", alibi: "Sleeping in executive lounge.", motive: "Rival prototype development funding.", suspiciousDetail: "Coffee mug left in cleanroom airlock." }
+        ],
+        clues: [
+          { id: "clue-1", title: "Compiled Diagnostic Shim", location: "Cleanroom Terminal", description: "Hardware bridge used to spoof biometric scanner, compiled from IP 192.168.1.42." },
+          { id: "clue-2", title: "IP Allocation Log", location: "Server Node 3", description: "IP 192.168.1.42 belongs exclusively to System Administrator Reiko Mori's personal rig." },
+          { id: "clue-3", title: "Overridden Vent Valve", location: "Cryo-Chiller Chamber", description: "Emergency safety pressure valve was physically wedged open with an insulated magnetic key." },
+          { id: "clue-4", title: "Sato's Whistleblower Memo", location: "Executive Email Queue", description: "Unsent email from Sato alerting legal counsel regarding Reiko Mori's data exfiltration." },
+          { id: "clue-5", title: "Thermal Sensor Anomaly", location: "Corridor C", description: "Thermal cameras recorded a figure in an anti-static ESD coat at 02:22 AM." },
+          { id: "clue-6", title: "Damaged Security Camera", location: "Airlock Entryway", description: "Camera optic sprayed with anti-reflective lens coating." },
+          { id: "clue-7", title: "Data Transfer Log", location: "External Gateway", description: "40 Gigabytes of neural architecture blueprints uploaded to an anonymous Swiss server." }
+        ],
+        hints: [
+          { id: "hint-1", order: 1, text: "Determine which computer terminal compiled the biometric override software." },
+          { id: "hint-2", order: 2, text: "Investigate who was facing imminent whistleblower reporting from Dr. Sato." },
+          { id: "hint-3", order: 3, text: "Connect the IP address allocation log with the sysadmin workstation." }
+        ],
+        culpritId: "suspect-3",
+        culpritName: "Reiko Mori",
+        solutionText: "System Administrator Reiko Mori discovered Dr. Sato was about to submit a formal whistleblower report detailing her illegal exfiltration of proprietary neural blueprints. Armed with root access, she compiled a diagnostic bypass shim from her personal IP, wedged open the cryo-vent to silence Sato, and initiated the 40GB data transfer. The forensic compilation timestamp and IP log directly exposed her guilt."
+      },
+      {
+        title: "The Orient Alpine Express Poisoning",
+        premise: "A reclusive gemstone magnate collapses over dinner while the passenger train is snowbound in a mountain pass.",
+        setting: "First-Class Dining Car & Sleeper Cabins",
+        timeOfCrime: "08:30 PM – 09:00 PM",
+        victim: "Lord Roderick Sterling (Gemstone Tycoon, incapacitated)",
+        incidentSummary: "During dessert service, Lord Sterling convulsed after sipping vintage port wine. A bitter almond aroma hung over the crystal goblet.",
+        suspects: [
+          { id: "suspect-1", name: "Madame Celine Dubois", role: "Parisian Antiquarian", alibi: "Reading in her sleeper compartment.", motive: "Sterling recently foreclosed on her family chateau.", suspiciousDetail: "Carried a monogrammed pillbox containing crushed cyanide crystals." },
+          { id: "suspect-2", name: "Captain Sterling Vance", role: "Nephew & Heir", alibi: "Playing bridge in the lounge car.", motive: "Heavily in debt, primary beneficiary in Sterling's will.", suspiciousDetail: "Seen speaking quietly with the dining car sommelier." },
+          { id: "suspect-3", name: "Henri Mercier", role: "Train Sommelier", alibi: "Serving wine at the center buffet station.", motive: "Bribed with a large sum of counterfeit banknotes found in pantry.", suspiciousDetail: "Rinsed only one specific crystal goblet immediately after the collapse." }
+        ],
+        clues: [
+          { id: "clue-1", title: "Almond Residue in Goblet", location: "Lord Sterling's Table", description: "Trace cyanide detected in the dregs of the dessert port glass." },
+          { id: "clue-2", title: "Monogrammed Pillbox", location: "Cabin 3 Lavatory", description: "Silver box stamped 'C.D.' containing residue of potassium cyanide." },
+          { id: "clue-3", title: "Foreclosure Notice", location: "Madame Dubois' Reticule", description: "Signed foreclosure writ from Sterling demanding seizure of her estate." },
+          { id: "clue-4", title: "Sommelier Station Notes", location: "Pantry Counter", description: "Guest preferences list indicating Madame Dubois personally brought the port bottle to dinner." },
+          { id: "clue-5", title: "Altered Alibi Statement", location: "Lounge Car Witness Record", description: "The train porter confirms Madame Dubois was seen near Sterling's table at 08:35 PM." }
+        ],
+        hints: [
+          { id: "hint-1", order: 1, text: "Examine the bitter almond smell and where poison was stored." },
+          { id: "hint-2", order: 2, text: "Match the initials on the silver pillbox to the guest list." }
+        ],
+        culpritId: "suspect-1",
+        culpritName: "Madame Celine Dubois",
+        solutionText: "Madame Celine Dubois poisoned Sterling's port wine using cyanide concealed within her antique silver pillbox. Desperate to prevent the foreclosure of her family estate, she slipped the poison into his glass under the guise of offering an aperitif toast. The cyanide residue in her monogrammed box and eyewitness sightings placed her directly at his table."
+      },
+      {
+        title: "The Midnight Gallery Arson",
+        premise: "A priceless Renaissance portrait is replaced by an ash counterfeit moments before an international collector auction.",
+        setting: "Metropolitan Auction House Exhibition Salon",
+        timeOfCrime: "11:30 PM – 11:55 PM",
+        victim: "Museum Curator Arthur Vance (Found locked in gallery vault)",
+        incidentSummary: "The master painting 'The Golden Muse' was cut from its gilt frame and replaced with a burning replica that triggered sprinklers.",
+        suspects: [
+          { id: "suspect-1", name: "Dominic Finch", role: "Master Art Restorer", alibi: "Cleaning palettes in the lower workshop.", motive: "Created the forgery; needed the original to fulfill black market order.", suspiciousDetail: "Specialist linen canvas threads matching the cut frame found on his apron." },
+          { id: "suspect-2", name: "Victoria Stone", role: "Lead Auctioneer", alibi: "Hosting VIP donors in the mezzanine.", motive: "Commission fee tied to the insurance payout.", suspiciousDetail: "Changed auction catalog order at 11:15 PM." },
+          { id: "suspect-3", name: "Gary Webb", role: "Night Guard", alibi: "Log entry indicates front desk duty.", motive: "Substantial gambling debt.", suspiciousDetail: "Security badge registered in the gallery salon at 11:40 PM." }
+        ],
+        clues: [
+          { id: "clue-1", title: "Linen Fiber Traces", location: "Cut Frame Margin", description: "Flax linen weave with cadmium yellow oil pigment residue." },
+          { id: "clue-2", title: "Precision Scalpel", location: "Restoration Workshop Bin", description: "Surgical scalpel with varnish residue matching the 16th-century painting." },
+          { id: "clue-3", title: "Thermal Igniter Stub", location: "Salon Sprinkler Sensor", description: "Slow-burn magnesium fuse used to delay sprinkler activation until escape." },
+          { id: "clue-4", title: "Smudged Paint Apron", location: "Dominic Finch's Locker", description: "Stains of proprietary zinc-white restoration primer on the hem." },
+          { id: "clue-5", title: "Stolen Shipping Tube", location: "Rear Alleyway Dumpster", description: "Cardboard tube labeled for shipping to an offshore art holding facility." }
+        ],
+        hints: [
+          { id: "hint-1", order: 1, text: "Inspect the tools and pigments found near the cut frame." },
+          { id: "hint-2", order: 2, text: "Check who had the technical art restoration skill to forge the replica." }
+        ],
+        culpritId: "suspect-1",
+        culpritName: "Dominic Finch",
+        solutionText: "Art restorer Dominic Finch substituted 'The Golden Muse' with his pre-painted forgery and ignited a slow-burn fuse to trigger sprinklers, masking the theft. His surgical scalpel and matching pigment stains on his apron sealed his indictment."
+      }
+    ];
+
+    let currentCase = null;
+    let selectedDifficulty = 'medium';
+    let selectedSuspectId = null;
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-msg');
+      if (toast && msgEl) {
+        msgEl.textContent = msg;
+        toast.classList.remove('hidden');
+        lucide.createIcons();
+        playTone(280, 'sawtooth', 0.15, 0.15);
+        setTimeout(() => toast.classList.add('hidden'), 3500);
+      }
+    }
+
+
+    // --- NAVIGATION & ROUTING ---
+    function navigateTo(viewId) {
+      ['home', 'create', 'loading', 'room', 'accuse', 'results'].forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (el) el.classList.add('hidden');
+      });
+
+      const target = document.getElementById('view-' + viewId);
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      if (viewId === 'accuse') {
+        renderAccusationView();
+      }
+
+      lucide.createIcons();
+    }
+
+    // --- PRESET & DIFFICULTY SELECTION ---
+    function applyPreset(index) {
+      const preset = PRESETS[index];
+      if (preset) {
+        document.getElementById('premise-input').value = preset.premise;
+        playTone(520, 'sine', 0.1);
+      }
+    }
+
+    function selectDifficulty(diff) {
+      selectedDifficulty = diff;
+      ['easy', 'medium', 'hard'].forEach(d => {
+        const card = document.getElementById('diff-' + d);
+        if (card) {
+          if (d === diff) {
+            const colorClass = d === 'easy' ? 'emerald' : d === 'medium' ? 'amber' : 'rose';
+            card.className = `cursor-pointer p-4 rounded-xl border border-${colorClass}-500/80 bg-${colorClass}-950/20 ring-1 ring-${colorClass}-500/50 shadow-lg shadow-${colorClass}-950/30 transition-all`;
+          } else {
+            card.className = 'cursor-pointer p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 transition-all';
+          }
+        }
+      });
+      playTone(480, 'sine', 0.08);
+    }
+
+    function quickLaunchDemo() {
+      applyPreset(0);
+      selectDifficulty('medium');
+      startGeneratingCase();
+    }
+
+    // --- CASE GENERATION ---
+    function startGeneratingCase() {
+      const input = document.getElementById('premise-input').value.trim();
+      const premise = input || "A rare gilded astrolabe disappears from a locked guild vault during a masquerade ball.";
+
+      navigateTo('loading');
+      playTone(350, 'sine', 0.2);
+
+      const statusEl = document.getElementById('loading-status');
+      const barEl = document.getElementById('loading-bar');
+
+      const steps = [
+        { msg: "Calling Gemini generative AI architect...", bar: "25%" },
+        { msg: "Generating suspect dossiers and competing motives...", bar: "55%" },
+        { msg: "Synthesizing forensic clues and encrypting hints...", bar: "80%" },
+        { msg: "Sequestering solution and locking backend vault...", bar: "100%" }
+      ];
+
+      let stepIndex = 0;
+      const interval = setInterval(() => {
+        if (stepIndex < steps.length) {
+          statusEl.textContent = steps[stepIndex].msg;
+          barEl.style.width = steps[stepIndex].bar;
+          playTone(400 + stepIndex * 50, 'sine', 0.08);
+          stepIndex++;
+        } else {
+          clearInterval(interval);
+          finishCaseGeneration(premise, selectedDifficulty);
+        }
+      }, 550);
+    }
+
+    function finishCaseGeneration(userPremise, diff) {
+      // Find matching preset or default
+      let basePreset = PRESETS[0];
+      for (const p of PRESETS) {
+        if (userPremise.toLowerCase().includes(p.title.toLowerCase().slice(0, 10)) ||
+            userPremise.toLowerCase().includes(p.setting.toLowerCase().slice(0, 10))) {
+          basePreset = p;
+          break;
+        }
+      }
+
+      // Configure scale by difficulty
+      const diffConfig = {
+        easy: { suspects: 3, clues: 5, hints: 2, basePoints: 100 },
+        medium: { suspects: 4, clues: 7, hints: 3, basePoints: 150 },
+        hard: { suspects: 5, clues: 9, hints: 3, basePoints: 200 }
+      }[diff];
+
+      const suspects = basePreset.suspects.slice(0, diffConfig.suspects);
+      const clues = basePreset.clues.slice(0, diffConfig.clues).map(c => ({
+        ...c,
+        isDiscovered: false
+      }));
+      const hints = basePreset.hints.slice(0, diffConfig.hints).map(h => ({
+        ...h,
+        isRevealed: false
+      }));
+
+      currentCase = {
+        id: 'CASE-' + Math.floor(1000 + Math.random() * 9000),
+        title: basePreset.title,
+        premise: userPremise,
+        difficulty: diff,
+        basePoints: diffConfig.basePoints,
+        story: {
+          setting: basePreset.setting,
+          victim: basePreset.victim,
+          incidentSummary: `${basePreset.incidentSummary} Context: "${userPremise.slice(0, 120)}"`,
+          timeOfCrime: basePreset.timeOfCrime
+        },
+        suspects,
+        clues,
+        hints,
+        solution: {
+          culpritId: basePreset.culpritId,
+          culpritName: basePreset.culpritName,
+          explanation: basePreset.solutionText
+        },
+        playerProgress: {
+          cluesDiscoveredCount: 0,
+          hintsUsedCount: 0,
+          maxHints: diffConfig.hints,
+          isAccused: false,
+          accusedSuspectId: null,
+          isCorrect: false,
+          score: 0
+        }
+      };
+
+      selectedSuspectId = null;
+      renderInvestigationRoom();
+      navigateTo('room');
+      playTone(660, 'triangle', 0.25);
+    }
+
+    // --- RENDER INVESTIGATION ROOM ---
+    function renderInvestigationRoom() {
+      if (!currentCase) return;
+
+      document.getElementById('case-badge-id').textContent = currentCase.id;
+      const diffBadge = document.getElementById('case-badge-diff');
+      diffBadge.textContent = currentCase.difficulty.toUpperCase();
+      diffBadge.className = `font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded border ${
+        currentCase.difficulty === 'hard'
+          ? 'bg-rose-950/40 text-rose-400 border-rose-800/40'
+          : currentCase.difficulty === 'medium'
+            ? 'bg-amber-950/40 text-amber-400 border-amber-800/40'
+            : 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40'
+      }`;
+
+      document.getElementById('case-title').textContent = currentCase.title;
+      document.getElementById('case-synopsis').textContent = currentCase.story.incidentSummary;
+      document.getElementById('case-setting').textContent = currentCase.story.setting;
+      document.getElementById('case-time').textContent = currentCase.story.timeOfCrime;
+
+      updateScorecard();
+      renderSuspects();
+      renderClues();
+    }
+
+    function updateScorecard() {
+      if (!currentCase) return;
+      const disc = currentCase.clues.filter(c => c.isDiscovered).length;
+      const hintsUsed = currentCase.playerProgress.hintsUsedCount;
+      const maxHints = currentCase.playerProgress.maxHints;
+
+      document.getElementById('scorecard-clues').textContent = `${disc} / ${currentCase.clues.length} (+${disc * 5} pts)`;
+      document.getElementById('scorecard-hints').textContent = `${hintsUsed} used (-${hintsUsed * 10} pts)`;
+      document.getElementById('scorecard-base').textContent = `+${currentCase.basePoints} pts`;
+      document.getElementById('hint-button-label').textContent = `Hints (${maxHints - hintsUsed} Left)`;
+    }
+
+    function renderSuspects() {
+      const container = document.getElementById('suspects-container');
+      container.innerHTML = '';
+
+      currentCase.suspects.forEach(suspect => {
+        const card = document.createElement('div');
+        card.className = "rounded-xl border border-zinc-800 bg-[#13141f] p-4 flex flex-col justify-between hover:border-zinc-700 transition-all text-xs";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center gap-3 pb-3 border-b border-zinc-800">
+              <div class="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center text-amber-400 font-cinzel text-base font-bold shrink-0">
+                ${suspect.name.charAt(0)}
+              </div>
+              <div class="min-w-0">
+                <h4 class="font-semibold text-zinc-100 truncate text-sm">${suspect.name}</h4>
+                <p class="text-[11px] text-amber-400/90 font-medium truncate">${suspect.role}</p>
+              </div>
+            </div>
+            <div class="mt-3 space-y-2.5">
+              <div>
+                <span class="text-zinc-400 uppercase tracking-wider block font-bold text-[10px]">Alibi:</span>
+                <p class="text-zinc-300 italic bg-zinc-950/60 p-2 rounded border border-zinc-800/60 text-[11px]">"${suspect.alibi}"</p>
+              </div>
+              <div>
+                <span class="text-amber-400 uppercase tracking-wider block font-bold text-[10px]">Potential Motive:</span>
+                <p class="text-zinc-300 bg-amber-950/20 p-2 rounded border border-amber-900/30 text-[11px]">${suspect.motive}</p>
+              </div>
+              <div>
+                <span class="text-rose-400 uppercase tracking-wider block font-bold text-[10px]">Suspicious Detail:</span>
+                <p class="text-zinc-300 bg-rose-950/20 p-2 rounded border border-rose-900/30 text-[11px]">${suspect.suspiciousDetail}</p>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function renderClues() {
+      const container = document.getElementById('clues-container');
+      container.innerHTML = '';
+
+      currentCase.clues.forEach(clue => {
+        const card = document.createElement('div');
+        card.className = `rounded-xl border transition-all overflow-hidden flex flex-col justify-between ${
+          clue.isDiscovered 
+            ? 'bg-[#151724] border-emerald-500/40 shadow-lg shadow-emerald-950/20' 
+            : 'bg-[#10121b] border-zinc-800 hover:border-amber-600/50'
+        }`;
+
+        if (clue.isDiscovered) {
+          card.innerHTML = `
+            <div class="p-3.5 border-b border-zinc-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h5 class="text-xs font-semibold text-zinc-100">${clue.title}</h5>
+                  <span class="text-[10px] text-zinc-400 font-mono">${clue.location}</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+5 PTS</span>
+            </div>
+            <div class="p-3.5 text-xs text-zinc-300 font-mono bg-zinc-950/40 flex-1 leading-relaxed">
+              ${clue.description}
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div class="p-3.5 border-b border-zinc-800 flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-zinc-900 text-zinc-500 border border-zinc-800 flex items-center justify-center">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h5 class="text-xs font-semibold text-zinc-300">${clue.title}</h5>
+                <span class="text-[10px] text-zinc-500 font-mono">${clue.location}</span>
+              </div>
+            </div>
+            <div class="p-3.5 space-y-2">
+              <p class="text-[11px] text-zinc-500 italic">Uninspected crime scene location.</p>
+              <button onclick="discoverClue('${clue.id}')" class="w-full py-2 px-3 rounded-lg bg-zinc-800 hover:bg-amber-600 hover:text-black text-zinc-200 text-xs font-semibold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-zinc-700">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                <span>Inspect (+5 pts)</span>
+              </button>
+            </div>
+          `;
+        }
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function discoverClue(clueId) {
+      if (!currentCase) return;
+      const clue = currentCase.clues.find(c => c.id === clueId);
+      if (clue && !clue.isDiscovered) {
+        clue.isDiscovered = true;
+        currentCase.playerProgress.cluesDiscoveredCount++;
+        playClueSound();
+        renderClues();
+        updateScorecard();
+      }
+    }
+
+    // --- HINT MODAL ---
+    function openHintModal() {
+      if (!currentCase) return;
+      renderHintModalList();
+      document.getElementById('hint-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeHintModal() {
+      document.getElementById('hint-modal').classList.add('hidden');
+    }
+
+    function renderHintModalList() {
+      const container = document.getElementById('modal-hints-list');
+      container.innerHTML = '';
+      const remaining = currentCase.playerProgress.maxHints - currentCase.playerProgress.hintsUsedCount;
+      document.getElementById('modal-hints-remaining').textContent = `${remaining} left`;
+
+      currentCase.hints.forEach((hint, idx) => {
+        const item = document.createElement('div');
+        item.className = `p-3 rounded-xl border text-xs leading-relaxed ${
+          hint.isRevealed 
+            ? 'bg-zinc-900 border-amber-500/40 text-zinc-200' 
+            : 'bg-zinc-950/40 border-zinc-800/80 text-zinc-600'
+        }`;
+        item.innerHTML = `
+          <div class="flex items-center justify-between font-mono text-[11px] mb-1">
+            <span class="${hint.isRevealed ? 'text-amber-400 font-bold' : 'text-zinc-600'}">Hint #${hint.order || idx + 1}</span>
+            <span class="text-[10px] uppercase">${hint.isRevealed ? 'Unlocked' : 'Encrypted'}</span>
+          </div>
+          <p class="${hint.isRevealed ? 'text-zinc-200' : 'text-zinc-600 italic'}">
+            ${hint.isRevealed ? hint.text : 'Encrypted hint. Click below to decrypt.'}
+          </p>
+        `;
+        container.appendChild(item);
+      });
+
+      const btn = document.getElementById('unlock-hint-btn');
+      if (remaining <= 0) {
+        btn.disabled = true;
+        btn.classList.add('opacity-40');
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('opacity-40');
+      }
+    }
+
+    function requestNextHint() {
+      if (!currentCase) return;
+      const unrevealed = currentCase.hints.find(h => !h.isRevealed);
+      if (unrevealed && currentCase.playerProgress.hintsUsedCount < currentCase.playerProgress.maxHints) {
+        unrevealed.isRevealed = true;
+        currentCase.playerProgress.hintsUsedCount++;
+        playHintSound();
+        renderHintModalList();
+        updateScorecard();
+      }
+    }
+
+    // --- ACCUSATION VIEW ---
+    function renderAccusationView() {
+      const container = document.getElementById('accuse-suspects-grid');
+      container.innerHTML = '';
+
+      currentCase.suspects.forEach(suspect => {
+        const isSel = selectedSuspectId === suspect.id;
+        const card = document.createElement('div');
+        card.onclick = () => selectSuspectForAccusation(suspect.id);
+        card.className = `cursor-pointer p-4 rounded-xl border transition-all text-xs flex flex-col justify-between ${
+          isSel
+            ? 'bg-amber-950/30 border-amber-400 ring-2 ring-amber-400/50 shadow-xl shadow-amber-950/40'
+            : 'bg-[#12131d] border-zinc-800 hover:border-zinc-700'
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-zinc-800 mb-2">
+              <span class="font-bold text-zinc-100 text-sm">${suspect.name}</span>
+              <span class="font-mono text-[10px] text-amber-400">${suspect.id}</span>
+            </div>
+            <p class="text-amber-400/90 font-medium mb-1">${suspect.role}</p>
+            <p class="text-zinc-400 italic mb-2">"${suspect.alibi}"</p>
+            <p class="text-zinc-300 text-[11px]"><strong class="text-rose-400">Suspicion:</strong> ${suspect.suspiciousDetail}</p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-zinc-800/80">
+            <span class="block text-center font-bold uppercase text-[10px] py-1.5 rounded ${
+              isSel ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'
+            }">
+              ${isSel ? '✓ Culprit Selected' : 'Click to Indict'}
+            </span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function selectSuspectForAccusation(id) {
+      selectedSuspectId = id;
+      playTone(490, 'sine', 0.1);
+      renderAccusationView();
+    }
+
+    function submitAccusation() {
+      if (!selectedSuspectId) {
+        showToast('Please select a suspect from the roster before submitting your indictment.');
+        return;
+      }
+
+      const notes = document.getElementById('accuse-notes').value.trim();
+      const isCorrect = (selectedSuspectId === currentCase.solution.culpritId);
+
+      // Scoring formula: Correct Base (100/150/200) + (Clues * 5) - (Hints * 10), min 0
+      const basePoints = isCorrect ? currentCase.basePoints : 0;
+      const cluePoints = currentCase.playerProgress.cluesDiscoveredCount * 5;
+      const hintPenalty = currentCase.playerProgress.hintsUsedCount * 10;
+      const finalScore = Math.max(0, basePoints + cluePoints - hintPenalty);
+
+      currentCase.playerProgress.isAccused = true;
+      currentCase.playerProgress.accusedSuspectId = selectedSuspectId;
+      currentCase.playerProgress.isCorrect = isCorrect;
+      currentCase.playerProgress.score = finalScore;
+
+      renderResultsView(isCorrect, finalScore, basePoints, cluePoints, hintPenalty);
+      navigateTo('results');
+
+      if (isCorrect) {
+        playVictorySound();
+      } else {
+        playDefeatSound();
+      }
+    }
+
+    // --- RESULTS VIEW ---
+    function renderResultsView(isCorrect, score, basePts, cluePts, hintPen) {
+      const verdictCard = document.getElementById('verdict-card');
+      const iconContainer = document.getElementById('verdict-icon-container');
+      const icon = document.getElementById('verdict-icon');
+      const title = document.getElementById('verdict-title');
+      const subtitle = document.getElementById('verdict-subtitle');
+
+      const accused = currentCase.suspects.find(s => s.id === currentCase.playerProgress.accusedSuspectId);
+
+      if (isCorrect) {
+        verdictCard.className = "p-8 rounded-3xl border border-emerald-500/50 bg-gradient-to-b from-[#112419] to-[#0c120e] text-center shadow-2xl shadow-emerald-950/40";
+        iconContainer.className = "inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 border border-emerald-500/30 bg-emerald-950/80 text-emerald-400";
+        icon.setAttribute('data-lucide', 'check-circle');
+        title.textContent = "CASE SOLVED: JUSTICE PREVAILS";
+        subtitle.textContent = `Brilliant deduction! You pinpointed ${currentCase.solution.culpritName} and established forensic truth.`;
+      } else {
+        verdictCard.className = "p-8 rounded-3xl border border-rose-500/50 bg-gradient-to-b from-[#251014] to-[#120a0d] text-center shadow-2xl shadow-rose-950/40";
+        iconContainer.className = "inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 border border-rose-500/30 bg-rose-950/80 text-rose-400";
+        icon.setAttribute('data-lucide', 'x-circle');
+        title.textContent = "CASE COLD: WRONG ACCUSATION";
+        subtitle.textContent = `You indicted ${accused ? accused.name : 'an innocent suspect'}. The true perpetrator slipped away.`;
+      }
+
+      document.getElementById('result-score').textContent = score;
+
+      // Rank calculation
+      const rankEl = document.getElementById('result-rank');
+      if (score >= 180) {
+        rankEl.textContent = "Chief Detective Inspector ⭐⭐⭐";
+        rankEl.className = "text-xs font-bold font-cinzel text-amber-400";
+      } else if (score >= 120) {
+        rankEl.textContent = "Senior Sleuth ⭐⭐";
+        rankEl.className = "text-xs font-bold font-cinzel text-emerald-400";
+      } else if (score >= 60) {
+        rankEl.textContent = "Field Investigator ⭐";
+        rankEl.className = "text-xs font-bold font-cinzel text-blue-400";
+      } else {
+        rankEl.textContent = "Rookie Sleuth 🔰";
+        rankEl.className = "text-xs font-bold font-cinzel text-zinc-400";
+      }
+
+      // Breakdown
+      document.getElementById('breakdown-base').textContent = `+${basePts} pts`;
+      document.getElementById('breakdown-clues-count').textContent = currentCase.playerProgress.cluesDiscoveredCount;
+      document.getElementById('breakdown-clues').textContent = `+${cluePts} pts`;
+      document.getElementById('breakdown-hints-count').textContent = currentCase.playerProgress.hintsUsedCount;
+      document.getElementById('breakdown-hints').textContent = `-${hintPen} pts`;
+      document.getElementById('breakdown-total').textContent = `${score} pts`;
+
+      // Culprit reveal
+      document.getElementById('culprit-name').textContent = `${currentCase.solution.culpritName} (${currentCase.solution.culpritId})`;
+      document.getElementById('culprit-explanation').textContent = currentCase.solution.explanation;
+
+      lucide.createIcons();
+    }
+
+    // Initialize on window load
+    window.onload = function() {
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>

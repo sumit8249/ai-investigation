@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #08090e;
+  color: #e2e8f0;
+}
+.font-cinzel { font-family: 'Cinzel', serif; }
